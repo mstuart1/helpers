@@ -11,8 +11,10 @@ latlong_fish <- function(x){
   # connect to the database
   library(dplyr)
   library(tidyr)
-  leyte <- src_mysql(dbname = "Leyte", default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
+  source("scripts/conleyte.R")
+  # leyte <- src_mysql(dbname = "Leyte", default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
   # find the anem_table_id for the sample
+  leyte <- conleyte()
   anem <- leyte %>% 
     tbl("clownfish") %>%
     select(sample_id, anem_table_id) %>% 
