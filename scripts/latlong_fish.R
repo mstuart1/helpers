@@ -5,7 +5,7 @@
 #' @author Michelle Stuart
 #' @param x = sample_id - the id of the fish you are trying to get the lat long for
 #' @examples 
-#' where <- latlong_fish(APCL12_093)
+#' where <- latlong_fish("APCL12_093")
 
 latlong_fish <- function(x){
   # connect to the database
