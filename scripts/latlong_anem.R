@@ -1,33 +1,22 @@
-# latlong_fish ####
+# latlong_anem ####
 #' a function to find the lat long of a given fish
 #' @export
-#' @name latlong_fish
+#' @name latlong_anem
 #' @author Michelle Stuart
-#' @param x = sample_id - the id of the fish you are trying to get the lat long for
+#' @param x = anem_id - the id of the anem you are trying to get lat long for
 #' @examples 
-#' where <- latlong_fish("APCL12_093")
+#' where <- latlong_anem(2268)
 
-latlong_fish <- function(x){
+latlong_anem <- function(x){
   # connect to the database
   library(dplyr)
   library(tidyr)
   source("scripts/conleyte.R")
-  # leyte <- src_mysql(dbname = "Leyte", default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
+  
   # find the anem_table_id for the sample
   leyte <- conleyte()
-  anem <- leyte %>% 
-    tbl("clownfish") %>%
-    select(sample_id, anem_table_id) %>% 
-    filter(sample_id == x) %>% 
-    collect()
   
-  # find the dive info and time for this fish
-  dive <- leyte %>% 
-    tbl("anemones") %>% 
-    select(anem_table_id, obs_time, dive_table_id) %>% 
-    collect() %>% 
-    filter(anem_table_id %in% anem$anem_table_id)
-
+  
   fish <- left_join(anem, dive, by = "anem_table_id")
 
   # find the date info and gps unit for this fish
