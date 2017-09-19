@@ -11,8 +11,8 @@ latlong_fish <- function(x){
   # connect to the database
   library(dplyr)
   library(tidyr)
-  source("scripts/conleyte.R")
-  # leyte <- src_mysql(dbname = "Leyte", default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
+  source("scripts/con_leyte.R")
+
   # find the anem_table_id for the sample
   leyte <- conleyte()
   anem <- leyte %>% 
@@ -40,8 +40,6 @@ latlong_fish <- function(x){
   fish <- left_join(fish, date, by = "dive_table_id") %>% 
     separate(obs_time, into = c("hour", "minute", "second"), sep = ":") %>% 
     mutate(gpx_hour = as.numeric(hour) - 8)
-  
-
   
   # find the lat long for this fish
   lat <- leyte %>%
