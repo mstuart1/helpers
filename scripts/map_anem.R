@@ -61,10 +61,17 @@ map_anem <- function(){
 
 
 # Write out for QGIS (has column headers)
-# out <- anem %>% 
-#   select(lat, lon, date, site, anem_id, anem_obs)
-# 
-# name <- paste(Sys.Date(), "_GPSSurvey_anemlatlong_", x, "_forQGIS.csv", sep = "")
-# write.table(out, file = name, col.names=T, sep=',', row.names=F, quote=T)
+out <- anem %>%
+  select(lat, lon, date, site, anem_id, anem_obs)
+
+name <- paste(Sys.Date(), "_GPSSurvey_anemlatlong_", x, "_forQGIS.csv", sep = "")
+write.table(out, file = name, col.names=T, sep=',', row.names=F, quote=T)
+
+return(anem)
+}
+
+
+  
+  
 
 
