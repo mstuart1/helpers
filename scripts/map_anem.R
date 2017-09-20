@@ -38,6 +38,7 @@ map_anem <- function(x){
     mutate(minute = as.numeric(minute))
   
   anem <- left_join(anem, dive, by = "dive_table_id")
+  
   rm(dive)
   
   # fix date if gpx hour is less than 0
@@ -62,6 +63,8 @@ map_anem <- function(x){
     # rejoin rows
     anem <- rbind(anem, other)
     
+  }else{
+    anem <- anem %>% mutate(gpx_date = date)
   }
   
   # find the lat long for this anem
