@@ -41,36 +41,34 @@ map_anem <- function(x){
   rm(dive)
   
   # fix date if gpx hour is less than 0
-test <- anem %>% 
-  filter(gpx_hour < 0)
-
-if (nrow(test) > 0){
-  anem <- anem %>%
+  test <- anem %>% 
+    filter(gpx_hour < 0)
+  
+  if (nrow(test) > 0){
+    anem <- anem %>%
     mutate(gpx_date = date) # create a new gpx date column
-  
-  other <- anem %>% 
-    filter(gpx_hour < 0) 
-  
-  # remove from anem table
-  anem <- anti_join(anem, other)
-  
-  # subtract date
-  other <- other %>% 
-    mutate(gpx_date = ymd(date) - days(1))
-
-  # rejoin rows
-  anem <- rbind(anem, other)
-  
-}
     
+    other <- anem %>% 
+    filter(gpx_hour < 0) 
+    
+    # remove from anem table
+    anem <- anti_join(anem, other)
+    
+    # subtract date
+    other <- other %>% 
+      mutate(gpx_date = as.character(ymd(date) - days(1))) %>% 
+      mutate(gpx_hour = gpx_hour + 24)
 
-
+    # rejoin rows
+    anem <- rbind(anem, other)
+    
+  }
   
   # find the lat long for this anem
   lat <- leyte %>%
     tbl("GPX") %>%
-    mutate(date = date(time)) %>%
-    filter(date %in% anem$date) %>% 
+    mutate(gpx_date = date(time)) %>%
+    filter(gpx_date %in% anem$date) %>% 
     mutate(gpx_hour = hour(time)) %>% 
     mutate(minute = minute(time)) %>% 
     mutate(second = second(time)) %>% 
@@ -78,11 +76,11 @@ if (nrow(test) > 0){
     collect()
   
   sum_lat <- lat %>%
-    group_by(unit, date, gpx_hour, minute) %>% 
+    group_by(unit, gpx_date, gpx_hour, minute) %>% 
     summarise(lat = mean(as.numeric(lat)),
       lon = mean(as.numeric(lon)))
   
-  anem <- left_join(anem, sum_lat, by = c("unit", "date", "gpx_hour", "minute"))
+  anem <- left_join(anem, sum_lat, by = c("unit", "gpx_date", "gpx_hour", "minute"))
 
 
 # Write out for QGIS (has column headers)
