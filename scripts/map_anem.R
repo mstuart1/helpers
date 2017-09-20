@@ -7,7 +7,7 @@
 #' @examples 
 #' dat <- map_anem(2016)
 
-map_anem <- function(){
+map_anem <- function(x){
   library(dplyr)
   library(tidyr)
   library(lubridate)
