@@ -71,7 +71,7 @@ map_anem <- function(x){
   lat <- leyte %>%
     tbl("GPX") %>%
     mutate(gpx_date = date(time)) %>%
-    filter(gpx_date %in% anem$date) %>% 
+    filter(gpx_date %in% anem$gpx_date) %>% 
     mutate(gpx_hour = hour(time)) %>% 
     mutate(minute = minute(time)) %>% 
     mutate(second = second(time)) %>% 
