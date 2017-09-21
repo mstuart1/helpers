@@ -14,65 +14,118 @@ source("scripts//con_leyte.R")
 leyte <- conleyte()
 
 # pull in all of the anemone data
-anem <- leyte %>%
+old <- leyte %>%
   tbl("anemones") %>%
-  filter(!is.na(anem_id)) %>% 
   collect()
 
-# find all of the anemones that have a value in the oldAnemID column and remove duplicates
+
+# select data to be changed
+anem <- old %>% 
+  filter(!is.na(anem_id))
+
+# remove from the odb
+old <- anti_join(old, anem, by = "anem_table_id")
+
+# find all of the anemones that have a value in the oldAnemID column and remove duplicates - these are anems that have been seen more than once
 multi <- anem %>%
   filter(!is.na(old_anem_id) & is.na(anem_obs)) %>%
   select(old_anem_id, anem_id, anem_obs) %>%
   distinct()
 
-# add all of the repeats for the same anem_id number
-dups <- anem[!is.na(anem$anem_id), ]
-dups <- dups[duplicated(dups$anem_id), ]
-dups <- dups[, c("old_anem_id", "anemobs", "anem_id")]
+# find anem_ids that occur more than once
+dups <- anem %>% 
+  group_by(anem_id) %>% 
+  summarise(count = n()) %>% 
+  filter(count > 1) %>% 
+  filter(anem_id != "-9999")
 
-for (i in 1:nrow(dups)){
-  X <- anem[which(anem$anem_id == dups$anem_id[i]), c("anemobs", "anem_id", "old_anem_id")]
-  multi <- rbind(multi, X)
-}
-
-# remove duplicates
-multi <- distinct(multi)
+# find all of the anems that are in the dups list and add them to the multi - dont' do distinct because need multiple rows of 
+more <- anem %>% 
+  filter(anem_id %in% dups$anem_id) %>% 
+  select(old_anem_id, anem_id, anem_obs) %>% 
+  rbind(multi) %>% 
+  distinct()
 
 # remove samples with observations
-multi <- multi[is.na(multi$anemobs), ]
+multi <- more %>% 
+  filter(is.na(more$anem_obs))
+
+# at this point, some anem_ids are represented more than once, and some have an old_anem_id and some do not.  Remove any duplicated that do not have an old_anem_id
+
+# make a list of duplicated
+many <- multi %>% 
+  group_by(anem_id) %>% 
+  summarise(count = n()) %>% 
+  filter(count > 1) 
+
+# take the ones that do not have an old_name_id
+so_many <- multi %>% 
+  filter(anem_id %in% many$anem_id) %>% 
+  filter(is.na(old_anem_id))
+
+# remove from multi
+multi <- anti_join(multi, so_many)
 
 # find the next obs number
-n <- max(anem$anemobs, na.rm = T)
-multi$anemobs <- (n+1):(n+nrow(multi))
+n <- max(anem$anem_obs, na.rm = T)
+if (n == -Inf){
+  n <- 0
+}
+multi$anem_obs <- (n+1):(n+nrow(multi))
+rm(more, many, so_many, dups)
 
-# connect repeat anems 
+# for each row in multi, which old_anem_id = anem_id, assign the old anem_id the same anem_obs as anem_id
 for (i in 1:nrow(multi)) {
-  multi$anemobs[which(multi$old_anem_id == multi$anem_id[i])] <- multi$anemobs[i]
+  multi$anem_obs[which(multi$old_anem_id == multi$anem_id[i])] <- multi$anem_obs[i]
 }
 
-# incorporate this into the anem table
-# test i <- 1
-for(i in 1:nrow(multi)){
-  anem$anemobs[which(anem$anem_id == multi$anem_id[i])] <- multi$anemobs[i]
-  anem$anemobs[which(anem$anem_id == multi$old_anem_id[i])] <- multi$anemobs[i]    
-  
-}
+# find old_anem_ids that are not in the multi table as original anem_ids
+have_match <- multi %>% 
+  filter(old_anem_id %in% anem_id)
+
+# remove all old_anem_ids that do not have a match in the id column and create an id column for them
+need_match <- anti_join(multi, have_match) %>% 
+  select(old_anem_id, anem_obs) %>% 
+  mutate(anem_id = old_anem_id)
+
+# rejoin to multi
+multi <- rbind(multi, need_match) %>% 
+  filter(anem_id != "-9999")
+
+# to incorporate this into the anem table, no longer need old_anem_id column because it is represented in the anem_id column and matched to an anem_obs
+multi <- multi %>% 
+  select(-old_anem_id) %>% 
+  distinct()
 
 
-# # make a backup of the db_table in case anything goes wrong
-# write.csv(anem, file = paste(Sys.time(), "_anembackup.csv", sep = ""))
+# remove rows to be changed from original db
+old <- anti_join(old, anem)
+
+# remove anem_obs from the anem table because nothing has ever been assigned an anem obs before, this won't work in the future - 
+anem <- select(anem, -anem_obs)
+
+# join the info
+anem <- left_join(anem, multi, by = "anem_id")
+
+# join to odb
+anem <- rbind(old, anem)
+
+# # too many rows, which row numbers are duplicated?
+# prob <- anem %>% 
+#   group_by(anem_table_id) %>% 
+#   summarise(count = n()) %>% 
+#   filter(count > 1) 
+# 
+# test <- filter(anem, anem_table_id == 860)
 
 
-# # add this data to the database
-# leytes <- writeleyte()
+library(RMySQL)
+
+# leyte <- dbConnect(MySQL(), "Leyte", default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
 # 
-# # Send data to database
-# library(RMySQL)
-# leytes <- dbConnect(MySQL(), dbname="Leyte", default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
-# 
-# dbWriteTable(leytes, "anemones", data.frame(anem), row.names = F, overwrite = T)
-# 
-# 
-# dbDisconnect(leytes)
-# rm(leytes)
+# dbWriteTable(leyte, "anemones", anem, row.names = F, overwrite = T)
+# # 
+# # 
+# dbDisconnect(leyte)
+# rm(leyte)
 
