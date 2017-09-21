@@ -31,7 +31,7 @@ map_anem <- function(x){
   anem <- leyte %>%
     tbl("anemones") %>%
     filter(dive_table_id %in% dive$dive_table_id & !is.na(anem_id)) %>%
-    select(dive_table_id, anem_id, anem_obs, obs_time) %>%
+    select(dive_table_id, anem_table_id, anem_id, anem_obs, obs_time) %>%
     collect() %>% 
     separate(obs_time, into = c("hour", "minute", "second"), sep = ":") %>% 
     mutate(gpx_hour = as.numeric(hour) - 8) %>% 
@@ -84,9 +84,25 @@ map_anem <- function(x){
       lon = mean(as.numeric(lon)))
   
   anem <- left_join(anem, sum_lat, by = c("unit", "gpx_date", "gpx_hour", "minute"))
+  rm(lat, other, sum_lat, test)
 
 
 # Write out for QGIS (has column headers)
+  # add fish info
+  # fish <- leyte %>% 
+  #   tbl("clownfish") %>% 
+  #   filter(anem_table_id %in% anem$anem_table_id) %>%
+  #   filter(!is.na(sample_id)) %>% 
+  #   collect()
+  # 
+  # anem <- left_join(anem, fish, by = "anem_table_id")
+  # 
+  # test <- anem %>% 
+  #   group_by(anem_id, site, lat, lon, date) %>% 
+  #   
+  # 
+  
+  
 out <- anem %>%
   select(lat, lon, date, site, anem_id, anem_obs)
 
