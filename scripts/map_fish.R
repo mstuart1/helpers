@@ -72,6 +72,7 @@ map_fish <- function(x){
   fish <- leyte %>% 
     tbl("clownfish") %>% 
     filter(anem_table_id %in% anem$anem_table_id) %>% 
+    filter(!is.na(sample_id)) %>% 
     collect()
   
   anem <- left_join(fish, anem, by = "anem_table_id")
