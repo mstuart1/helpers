@@ -106,7 +106,7 @@ map_anem <- function(x){
 out <- anem %>%
   select(lat, lon, date, site, anem_id, anem_obs)
 
-name <- paste(Sys.Date(), "_GPSSurvey_anemlatlong_", x, "_forQGIS.csv", sep = "")
+name <- paste("~/Documents/Phils_GIS/Anems/",Sys.Date(), "_GPSSurvey_anemlatlong_", x, "_forQGIS.csv", sep = "")
 write.table(out, file = name, col.names=T, sep=',', row.names=F, quote=T)
 
 return(anem)
