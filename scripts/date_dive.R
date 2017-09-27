@@ -1,19 +1,16 @@
-# date_dive ####
-#' a list of dives within a date range
+# daterange_dive ####
+#' for a given date range, list all of the dives
 #' @export
-#' @name date_dive
+#' @name daterange_dive
 #' @author Michelle Stuart
 #' @param x = beginning date
 #' @param y = end date
 #' @examples 
-#' dat <- date_dive("2016-01-01", "2016-12-30")
+#' dat <- daterange_dive("2016-01-01", "2016-12-30")
 
 
-date_dive <- function(x, y){
-  library(dplyr)
-  source("scripts/con_leyte.R")
-  
-  leyte <- conleyte()
+daterange_dive <- function(x, y){
+  leyte <- read_db()
   
   dive <- leyte %>% 
     tbl("diveinfo") %>% 
