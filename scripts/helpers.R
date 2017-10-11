@@ -1,4 +1,5 @@
 # one source for all of the helper functions to work with Leyte database and clownfish data
+library(dplyr)
 
 # read_db ####
 #' views all of the fish recaptured at a given site
@@ -9,9 +10,9 @@
 #' @examples 
 #' db <- read_Db("Leyte")
 
-read_db <- function(x){
-  library(dplyr)
-  db <- src_mysql(dbname = x, default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
+read_db <- function(db_name){
+  
+  db <- src_mysql(dbname = db_name, default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
   return(db)
 }
 
@@ -24,9 +25,9 @@ read_db <- function(x){
 #' @examples 
 #' db <- write_db("Leyte")
 
-write_db <- function(x){
+write_db <- function(db_name){
   library(RMySQL)
-  db <- dbConnect(MySQL(), dbname = x, default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
+  db <- dbConnect(MySQL(), dbname = db_name, default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
   return(db)
 }
 
@@ -40,7 +41,7 @@ write_db <- function(x){
 #' info <- site_recap("Haina")
 
 site_recap <- function(site){
-  library(dplyr)
+  
   leyte <- read_db("Leyte")
   
   # select all dives at a given site
@@ -103,12 +104,12 @@ site_recap <- function(site){
 #' dat <- daterange_dive("2016-01-01", "2016-12-30")
 
 
-daterange_dive <- function(x, y){
+daterange_dive <- function(begin_date, end_date){
   leyte <- read_db("Leyte")
   
   dive <- leyte %>% 
     tbl("diveinfo") %>% 
-    filter(date > x & date < y) %>% 
+    filter(date > begin_date & date < end_date) %>% 
     collect()
   
   return(dive)
@@ -124,13 +125,13 @@ daterange_dive <- function(x, y){
 #' @examples 
 #' dat <- year_map_fish(2016)
 
-year_map_fish <- function(x){
-  # library(dplyr)
+year_map_fish <- function(year){
+  # 
   library(tidyr)
   library(lubridate)
   
-  begin <- paste(x, "01", "01", sep = "-")
-  end <- paste(x, "12", "31", sep = "-")
+  begin <- paste(year, "01", "01", sep = "-")
+  end <- paste(year, "12", "31", sep = "-")
   
   leyte <- read_db("Leyte")
   
@@ -214,7 +215,7 @@ year_map_fish <- function(x){
   out <- anem %>%
     select(lat, lon, date, site, anem_id, sample_id)
   
-  name <- paste(Sys.Date(), "_GPSSurvey_fishlatlong_", x, "_forQGIS.csv", sep = "")
+  name <- paste(Sys.Date(), "_GPSSurvey_fishlatlong_", year, "_forQGIS.csv", sep = "")
   write.table(out, file = name, col.names=T, sep=',', row.names=F, quote=T)
   
   return(anem) # this anem table contains fish
@@ -229,14 +230,14 @@ year_map_fish <- function(x){
 #' @examples 
 #' where <- sample_latlon("APCL12_093")
 
-sample_latlon <- function(x){
+sample_latlon <- function(sample_id){
   library(tidyr)
   # find the anem_table_id for the sample
   leyte <- read_db()
   anem <- leyte %>% 
     tbl("clownfish") %>%
     select(sample_id, anem_table_id) %>% 
-    filter(sample_id == x) %>% 
+    filter(sample_id == sample_id) %>% 
     collect()
   
   # find the dive info and time for this fish
@@ -269,8 +270,8 @@ sample_latlon <- function(x){
     separate(time, into = c("hour", "minute", "second"), sep = ":") %>% 
     filter(as.numeric(hour) == fish$gpx_hour & as.numeric(minute) == fish$minute)
   
-  x <- (which(duplicated(lat$lat)) > 0 & which(duplicated(lat$lon) > 0))
-  if(length(x) == 0){
+  sample_id <- (which(duplicated(lat$lat)) > 0 & which(duplicated(lat$lon) > 0))
+  if(length(sample_id) == 0){
     fish$lat <- round(summarise(lat, mean(as.numeric(lat))), digits = 5)
     fish$lon <- round(summarise(lat, mean(as.numeric(lon))), digits = 5)
   }else{
@@ -283,6 +284,36 @@ sample_latlon <- function(x){
   return(fish)
   
 }
+
+
+
+# anem_date ####
+#' allows you to find the date based on the anem_table_id
+#' @param x = anem_table_id - Where are the anem_table_id's located?
+#' @keywords 
+#' @export
+#' @examples
+#' anem_date(anem_table_id)
+#' anem_date(2206)
+
+anem_date <- function(anem_tbl_id){
+  leyte <- read_db("Leyte")
+  anem <- leyte %>% 
+    tbl("anemones") %>% 
+    filter(anem_table_id == anem_tbl_id) %>% 
+    select(dive_table_id, anem_table_id) %>% 
+    collect()
+  
+  day <- leyte %>% 
+    tbl("diveinfo") %>%
+    select(date, dive_table_id) %>%
+    collect() %>% 
+    filter(dive_table_id %in% anem$dive_table_id)
+  
+  day <- left_join(day, anem, by ="dive_table_id")
+  return(day)
+}
+
 
 
 
