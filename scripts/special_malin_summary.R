@@ -18,58 +18,41 @@ leyte <- read_db("Leyte")
 # define the time periods
 # year <- c("2012", "2013", "2014", "2015", "2016", "2017")
 
-# define fish observation dives, included A because fish that were seen at anemones 
-# fishes <- c("C", "D", "E")
+# define fish and anemone observation dives, included A because fish that were seen at anemones
+fishes <- c("A", "C", "D", "E")
 
-# define anem observation dives
+# # define anem observation dives
 # anems <- c("A", "C", "D", "E")
 
-
-# for number of fish, get the fish data
-fish <- leyte %>% 
-  tbl("clownfish") %>% 
-  select(fish_table_id, anem_table_id, fish_spp, size, cap_id, recap, tag_id, sample_id) %>% 
+# find dives that qualify 
+dive <- leyte %>% 
+  tbl("diveinfo") %>%
+  select(date, dive_table_id, dive_type) %>% 
+  filter(dive_type %in% fishes) %>% 
   collect()
 
-# remove the fish from 2017 that do not have anem_table_ids
-prob <- fish %>% 
-  filter(is.na(anem_table_id))
-
-fish <- anti_join(fish, prob, by = "fish_table_id")
-
-# pull in anemones for these fish
+# find anemones that were observed during qualifying dives
 anem <- leyte %>% 
   tbl("anemones") %>% 
   select(anem_table_id, dive_table_id, anem_spp) %>% 
-  filter(anem_table_id %in% fish$anem_table_id) %>% 
+  filter(dive_table_id %in% dive$dive_table_id) %>% 
   collect() 
 
-fish <- left_join(fish, anem, by = "anem_table_id")
 
-# fish <- fish %>% 
-#   filter(dive_type %in% fishes) # doesn't work because of database errors
-
-# get the dive data
-dive <- leyte %>% 
-  tbl("diveinfo") %>%
-  select(date, dive_table_id) %>% 
-  filter(dive_table_id %in% fish$dive_table_id) %>% 
+# get the fish data for these dives
+fish <- leyte %>% 
+  tbl("clownfish") %>% 
+  select(fish_table_id, anem_table_id, fish_spp, size, cap_id, recap, tag_id, sample_id) %>% 
+  filter(anem_table_id %in% anem$anem_table_id) %>% 
   collect()
 
+# add dates to fish observations
+fish <- left_join(fish, anem, by = "anem_table_id") 
 fish <- left_join(fish, dive, by = "dive_table_id")
 
 fish <- fish %>% 
   mutate(year = year(date))
 
-# add columns to prob
-prob$dive_table_id <- NA
-prob$anem_spp <- NA
-prob$date <- NA
-prob$year <- 2017
-
-# add prob fish back into total table
-fish <- rbind(fish, prob)
-fish <- distinct(fish)
 
 num_fish <- fish %>%
   group_by(year) %>% 
@@ -136,23 +119,26 @@ num_pit <- fish %>%
   )
 
 
+# 
+# 
+# # get number of anemones 
+# anem <- leyte %>% 
+#   tbl("anemones") %>% 
+#   select(dive_table_id, anem_spp, anem_table_id) %>% 
+#   filter(!is.na(anem_spp)) %>% 
+#   collect()
+# 
+# # get the dive data
+# dive <- leyte %>% 
+#   tbl("diveinfo") %>% 
+#   select(dive_table_id, date) %>% 
+#   filter(dive_table_id %in% anem$dive_table_id) %>% 
+#   collect()
+# 
 
-
-# get number of anemones 
-anem <- leyte %>% 
-  tbl("anemones") %>% 
-  select(dive_table_id, anem_spp, anem_table_id) %>% 
-  filter(!is.na(anem_spp)) %>% 
-  collect()
-
-# get the dive data
-dive <- leyte %>% 
-  tbl("diveinfo") %>% 
-  select(dive_table_id, date) %>% 
-  filter(dive_table_id %in% anem$dive_table_id) %>% 
-  collect()
-
+# add dates to anem table
 anem <- left_join(anem, dive, by = "dive_table_id")
+
 anem <- anem %>% 
   mutate(year = year(date))
 
@@ -172,3 +158,4 @@ summary <- left_join(summary, num_cap)
 summary <- left_join(summary, num_pit)
 
 summary <- left_join(summary, num_tag)
+
