@@ -39,13 +39,14 @@ write_db <- function(x){
 #' @examples 
 #' info <- site_recap("Haina")
 
-site_recap <- function(x){
+site_recap <- function(site){
+  library(dplyr)
   leyte <- read_db("Leyte")
   
   # select all dives at a given site
   dive <- leyte %>%
     tbl("diveinfo") %>%
-    filter(site == x) %>%
+    filter(site == site) %>%
     collect()
   
   # select all anemones from those dives
@@ -64,7 +65,7 @@ site_recap <- function(x){
   
   # are there any recaptured tags?
   recap <- fish %>% 
-    filter(grepl(pattern = "Y", x = fish$recap))
+    filter(grepl("Y", recap))
   
   # are there any capids?
   capids <- fish %>% 
@@ -73,8 +74,10 @@ site_recap <- function(x){
   # select all sample_ids for which there is not a duplicated tag_id
   if(nrow(recap) != 0){
     uni <- fish %>% 
+      filter(is.na(cap_id)) %>%  # don't want to remove fish that are capid
       distinct(tag_id) %>% 
-      filter(!is.na(tag_id) & is.na(cap_id)) # don't want to remove fish that are capid
+      filter(!is.na(tag_id))
+    
     # remove all fish that have a distinct tag_id (were not recaptured)
     fish <- anti_join(fish, uni, by = "tag_id")
   }
