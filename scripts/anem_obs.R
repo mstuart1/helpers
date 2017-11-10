@@ -7,48 +7,43 @@
 #' @examples 
 #' dat <- anem_obs()
 
-source("scripts//con_leyte.R")
-# source("writeleyte.R")
+source("scripts/helpers.R")
 
 # connect to the database
-leyte <- conleyte()
+leyte <- read_db("Leyte")
 
 # pull in all of the anemone data
-old <- leyte %>%
+anem <- leyte %>%
   tbl("anemones") %>%
   collect()
 
 
 # select data to be changed
-anem <- old %>% 
+change <- anem %>% 
   filter(!is.na(anem_id))
 
-# remove from the odb
-old <- anti_join(old, anem, by = "anem_table_id")
+# remove from the db
+anem <- anti_join(anem, change, by = "anem_table_id")
 
-# find all of the anemones that have a value in the oldAnemID column and remove duplicates - these are anems that have been seen more than once
-multi <- anem %>%
-  filter(!is.na(old_anem_id) & is.na(anem_obs)) %>%
-  select(old_anem_id, anem_id, anem_obs) %>%
+# find all of the anemones that have a value in the oldAnemID column and remove duplicates - these are anems that have been seen more than once ~10, went from 276 to 266
+multi <- change %>%
+  filter(!is.na(old_anem_id)) %>%
+  select(old_anem_id, anem_id) %>%
   distinct()
 
 # find anem_ids that occur more than once
-dups <- anem %>% 
+dups <- change %>% 
   group_by(anem_id) %>% 
   summarise(count = n()) %>% 
   filter(count > 1) %>% 
   filter(anem_id != "-9999")
 
-# find all of the anems that are in the dups list and add them to the multi - dont' do distinct because need multiple rows of 
-more <- anem %>% 
+# find all of the anems that are in the dups list and add them to the multi - dont' do distinct because need multiple rows 
+more <- change %>% 
   filter(anem_id %in% dups$anem_id) %>% 
-  select(old_anem_id, anem_id, anem_obs) %>% 
+  select(old_anem_id, anem_id) %>% 
   rbind(multi) %>% 
   distinct()
-
-# remove samples with observations
-multi <- more %>% 
-  filter(is.na(more$anem_obs))
 
 # at this point, some anem_ids are represented more than once, and some have an old_anem_id and some do not.  Remove any duplicated that do not have an old_anem_id
 
@@ -67,7 +62,7 @@ so_many <- multi %>%
 multi <- anti_join(multi, so_many)
 
 # find the next obs number
-n <- max(anem$anem_obs, na.rm = T)
+n <- max(change$anem_obs, na.rm = T)
 if (n == -Inf){
   n <- 0
 }
