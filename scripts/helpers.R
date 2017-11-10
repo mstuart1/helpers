@@ -10,11 +10,12 @@ library(dplyr)
 #' @examples 
 #' db <- read_Db("Leyte")
 
-read_db <- function(db_name){
-  
-  db <- src_mysql(dbname = db_name, default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
+read_db <- function(x){
+  library(dplyr)
+  db <- src_mysql(dbname = x, default.file = path.expand("~/myconfig.cnf"), port = 3306, create = F, host = NULL, user = NULL, password = NULL)
   return(db)
 }
+
 
 # write_db ####
 #' access db with intent to change it
